@@ -2453,6 +2453,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 		RENDER_TIMESTAMP("Render Sky");
 
 		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDisable(GL_BLEND);
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
@@ -2600,20 +2601,35 @@ void RasterizerSceneGLES3::_render_list_template(RenderListParameters *p_params,
 			}
 		}
 
-		if constexpr (p_pass_mode != PASS_MODE_SHADOW) {
-			if (scene_state.current_depth_draw != shader->depth_draw) {
-				switch (shader->depth_draw) {
-					case GLES3::SceneShaderData::DEPTH_DRAW_OPAQUE: {
-						glDepthMask((p_pass_mode == PASS_MODE_COLOR && !GLES3::Config::get_singleton()->use_depth_prepass) ||
-								p_pass_mode == PASS_MODE_DEPTH);
-					} break;
-					case GLES3::SceneShaderData::DEPTH_DRAW_ALWAYS: {
-						glDepthMask(GL_TRUE);
-					} break;
-					case GLES3::SceneShaderData::DEPTH_DRAW_DISABLED: {
-						glDepthMask(GL_FALSE);
-					} break;
-				}
+		if (scene_state.current_depth_function != shader->depth_function) {
+			GLenum depth_function_table[GLES3::SceneShaderData::DEPTH_FUNCTION_MAX] = {
+				GL_LEQUAL,
+				GL_LESS,
+				GL_EQUAL,
+				GL_GREATER,
+				GL_NOTEQUAL,
+				GL_GEQUAL,
+				GL_ALWAYS,
+				GL_NEVER,
+			};
+
+			glDepthFunc(depth_function_table[shader->depth_function]);
+			scene_state.current_depth_function = shader->depth_function;
+		}
+
+		if (scene_state.current_depth_draw != shader->depth_draw) {
+			switch (shader->depth_draw) {
+				case GLES3::SceneShaderData::DEPTH_DRAW_OPAQUE: {
+					glDepthMask((p_pass_mode == PASS_MODE_COLOR && !GLES3::Config::get_singleton()->use_depth_prepass) ||
+							p_pass_mode == PASS_MODE_DEPTH ||
+							p_pass_mode == PASS_MODE_SHADOW);
+				} break;
+				case GLES3::SceneShaderData::DEPTH_DRAW_ALWAYS: {
+					glDepthMask(GL_TRUE);
+				} break;
+				case GLES3::SceneShaderData::DEPTH_DRAW_DISABLED: {
+					glDepthMask(GL_FALSE);
+				} break;
 			}
 
 			scene_state.current_depth_draw = shader->depth_draw;

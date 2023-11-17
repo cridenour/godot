@@ -1232,6 +1232,115 @@ void SurfaceTool::generate_normals(bool p_flip) {
 	}
 }
 
+void SurfaceTool::generate_normals_to_color(bool p_flip) {
+	ERR_FAIL_COND(primitive != Mesh::PRIMITIVE_TRIANGLES);
+
+	bool was_indexed = index_array.size();
+
+	deindex();
+
+	ERR_FAIL_COND((vertex_array.size() % 3) != 0);
+
+	HashMap<SmoothGroupVertex, Vector3, SmoothGroupVertexHasher> smooth_hash;
+
+	for (uint32_t vi = 0; vi < vertex_array.size(); vi += 3) {
+		Vertex *v = &vertex_array[vi];
+
+		Vector3 normal;
+		if (!p_flip) {
+			normal = Plane(v[0].vertex, v[1].vertex, v[2].vertex).normal;
+		} else {
+			normal = Plane(v[2].vertex, v[1].vertex, v[0].vertex).normal;
+		}
+
+		for (int i = 0; i < 3; i++) {
+			// Add face normal to smooth vertex influence if vertex is member of a smoothing group
+			if (v[i].smooth_group != UINT32_MAX) {
+				Vector3 *lv = smooth_hash.getptr(v[i]);
+				if (!lv) {
+					smooth_hash.insert(v[i], normal);
+				} else {
+					(*lv) += normal;
+				}
+			} else {
+				v[i].color = Color(normal.x, normal.y, normal.z);
+			}
+		}
+	}
+
+	for (Vertex &vertex : vertex_array) {
+		if (vertex.smooth_group != UINT32_MAX) {
+			Vector3 *lv = smooth_hash.getptr(vertex);
+			if (!lv) {
+				vertex.color = Color();
+			} else {
+				Vector3 normal = lv->normalized();
+				vertex.color = Color(normal.x, normal.y, normal.z);
+			}
+		}
+	}
+
+	format |= Mesh::ARRAY_FORMAT_COLOR;
+
+	if (was_indexed) {
+		index();
+	}
+}
+
+void SurfaceTool::generate_normals_to_tangents(bool p_flip) {
+	ERR_FAIL_COND(primitive != Mesh::PRIMITIVE_TRIANGLES);
+
+	bool was_indexed = index_array.size();
+
+	deindex();
+
+	ERR_FAIL_COND((vertex_array.size() % 3) != 0);
+
+	HashMap<SmoothGroupVertex, Vector3, SmoothGroupVertexHasher> smooth_hash;
+
+	for (uint32_t vi = 0; vi < vertex_array.size(); vi += 3) {
+		Vertex *v = &vertex_array[vi];
+
+		Vector3 normal;
+		if (!p_flip) {
+			normal = Plane(v[0].vertex, v[1].vertex, v[2].vertex).normal;
+		} else {
+			normal = Plane(v[2].vertex, v[1].vertex, v[0].vertex).normal;
+		}
+
+		for (int i = 0; i < 3; i++) {
+			// Add face normal to smooth vertex influence if vertex is member of a smoothing group
+			if (v[i].smooth_group != UINT32_MAX) {
+				Vector3 *lv = smooth_hash.getptr(v[i]);
+				if (!lv) {
+					smooth_hash.insert(v[i], normal);
+				} else {
+					(*lv) += normal;
+				}
+			} else {
+				v[i].tangent = normal;
+			}
+		}
+	}
+
+	for (Vertex &vertex : vertex_array) {
+		if (vertex.smooth_group != UINT32_MAX) {
+			Vector3 *lv = smooth_hash.getptr(vertex);
+			if (!lv) {
+				vertex.tangent = Vector3();
+			} else {
+				vertex.tangent = lv->normalized();
+			}
+		}
+	}
+
+	format |= Mesh::ARRAY_FORMAT_TANGENT;
+
+	if (was_indexed) {
+		index();
+	}
+}
+
 void SurfaceTool::set_material(const Ref<Material> &p_material) {
 	material = p_material;
 }
@@ -1360,6 +1469,8 @@ void SurfaceTool::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("index"), &SurfaceTool::index);
 	ClassDB::bind_method(D_METHOD("deindex"), &SurfaceTool::deindex);
 	ClassDB::bind_method(D_METHOD("generate_normals", "flip"), &SurfaceTool::generate_normals, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("generate_normals_to_color", "flip"), &SurfaceTool::generate_normals_to_color, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("generate_normals_to_tangents", "flip"), &SurfaceTool::generate_normals_to_tangents, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("generate_tangents"), &SurfaceTool::generate_tangents);
 
 	ClassDB::bind_method(D_METHOD("optimize_indices_for_cache"), &SurfaceTool::optimize_indices_for_cache);

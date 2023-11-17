@@ -205,6 +205,8 @@ public:
 	void index();
 	void deindex();
 	void generate_normals(bool p_flip = false);
+	void generate_normals_to_color(bool p_flip = false);
+	void generate_normals_to_tangents(bool p_flip = false);
 	void generate_tangents();
 
 	void optimize_indices_for_cache();

@@ -2022,8 +2022,65 @@ void RenderForwardClustered::_render_scene(RenderDataRD *p_render_data, const Co
 
 			uint32_t opaque_color_pass_flags = using_motion_pass ? (color_pass_flags & ~COLOR_PASS_FLAG_MOTION_VECTORS) : color_pass_flags;
 			RID opaque_framebuffer = using_motion_pass ? rb_data->get_color_pass_fb(opaque_color_pass_flags) : color_framebuffer;
-			RenderListParameters render_list_params(render_list[RENDER_LIST_OPAQUE].elements.ptr(), render_list[RENDER_LIST_OPAQUE].element_info.ptr(), render_list[RENDER_LIST_OPAQUE].elements.size(), reverse_cull, PASS_MODE_COLOR, opaque_color_pass_flags, rb_data.is_null(), p_render_data->directional_light_soft_shadows, rp_uniform_set, get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME, Vector2(), p_render_data->scene_data->lod_distance_multiplier, p_render_data->scene_data->screen_mesh_lod_threshold, p_render_data->scene_data->view_count);
-			_render_list_with_threads(&render_list_params, opaque_framebuffer, keep_color ? RD::INITIAL_ACTION_KEEP : RD::INITIAL_ACTION_CLEAR, render_motion_pass ? RD::FINAL_ACTION_CONTINUE : final_color_action, depth_pre_pass ? (continue_depth ? RD::INITIAL_ACTION_CONTINUE : RD::INITIAL_ACTION_KEEP) : RD::INITIAL_ACTION_CLEAR, render_motion_pass ? RD::FINAL_ACTION_CONTINUE : final_depth_action, c, 1.0, 0);
+			// Standard opaque.
+			{
+				RenderListParameters render_list_params(
+						render_list[RENDER_LIST_OPAQUE].elements.ptr(),
+						render_list[RENDER_LIST_OPAQUE].element_info.ptr(),
+						render_list[RENDER_LIST_OPAQUE].elements.size(),
+						reverse_cull,
+						PASS_MODE_COLOR,
+						opaque_color_pass_flags,
+						rb_data.is_null(),
+						p_render_data->directional_light_soft_shadows,
+						rp_uniform_set,
+						get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME,
+						Vector2(),
+						p_render_data->scene_data->lod_distance_multiplier,
+						p_render_data->scene_data->screen_mesh_lod_threshold,
+						p_render_data->scene_data->view_count);
+				_render_list_with_threads(
+						&render_list_params,
+						opaque_framebuffer,
+						keep_color ? RD::INITIAL_ACTION_KEEP : RD::INITIAL_ACTION_CLEAR,
+						scene_state.used_opaque_no_depth_prepass ? RD::FINAL_ACTION_CONTINUE : (will_continue_color ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ),
+						depth_pre_pass ? (continue_depth ? RD::INITIAL_ACTION_CONTINUE : RD::INITIAL_ACTION_KEEP) : RD::INITIAL_ACTION_CLEAR,
+						scene_state.used_opaque_no_depth_prepass ? RD::FINAL_ACTION_CONTINUE : (will_continue_depth ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ),
+						c,
+						1.0,
+						0);
+			}
+
+			// Opaque without depth prepass.
+			if (scene_state.used_opaque_no_depth_prepass) {
+				//TODO: Might need to call _setup_environment here to disable screen-space effects.
+				rp_uniform_set = _setup_render_pass_uniform_set(RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS, p_render_data, radiance_texture, true);
+				RenderListParameters render_list_params(
+						render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].elements.ptr(),
+						render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].element_info.ptr(),
+						render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].elements.size(),
+						reverse_cull,
+						PASS_MODE_COLOR,
+						opaque_color_pass_flags,
+						rb_data.is_null(),
+						p_render_data->directional_light_soft_shadows,
+						rp_uniform_set,
+						get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME,
+						Vector2(),
+						p_render_data->scene_data->lod_distance_multiplier,
+						p_render_data->scene_data->screen_mesh_lod_threshold,
+						p_render_data->scene_data->view_count);
+				_render_list_with_threads(
+						&render_list_params,
+						opaque_framebuffer,
+						RD::INITIAL_ACTION_CONTINUE,
+						will_continue_color ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ,
+						RD::INITIAL_ACTION_CONTINUE,
+						will_continue_depth ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ,
+						c,
+						1.0,
+						0);
+			}
 		}
 
 		RD::get_singleton()->draw_command_end_label();
@@ -2050,72 +2107,6 @@ void RenderForwardClustered::_render_scene(RenderDataRD *p_render_data, const Co
 				RD::get_singleton()->draw_list_begin(rb_data->get_velocity_only_fb(), RD::INITIAL_ACTION_CONTINUE, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_CONTINUE, RD::FINAL_ACTION_CONTINUE);
 				RD::get_singleton()->draw_list_end();
 			}
-		}
-
-		// Standard opaque.
-		{
-			RenderListParameters render_list_params(
-					render_list[RENDER_LIST_OPAQUE].elements.ptr(),
-					render_list[RENDER_LIST_OPAQUE].element_info.ptr(),
-					render_list[RENDER_LIST_OPAQUE].elements.size(),
-					reverse_cull,
-					PASS_MODE_COLOR,
-					color_pass_flags,
-					rb_data.is_null(),
-					p_render_data->directional_light_soft_shadows,
-					rp_uniform_set,
-					get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME,
-					Vector2(),
-					p_render_data->scene_data->lod_distance_multiplier,
-					p_render_data->scene_data->screen_mesh_lod_threshold,
-					p_render_data->scene_data->view_count);
-			_render_list_with_threads(
-					&render_list_params,
-					color_framebuffer,
-					keep_color ? RD::INITIAL_ACTION_KEEP : RD::INITIAL_ACTION_CLEAR,
-					scene_state.used_opaque_no_depth_prepass ? RD::FINAL_ACTION_CONTINUE : (will_continue_color ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ),
-					depth_pre_pass ? (continue_depth ? RD::INITIAL_ACTION_CONTINUE : RD::INITIAL_ACTION_KEEP) : RD::INITIAL_ACTION_CLEAR,
-					scene_state.used_opaque_no_depth_prepass ? RD::FINAL_ACTION_CONTINUE : (will_continue_depth ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ),
-					c,
-					1.0,
-					0);
-		}
-
-		// Opaque without depth prepass.
-		if (scene_state.used_opaque_no_depth_prepass) {
-			//TODO: Might need to call _setup_environment here to disable screen-space effects.
-			rp_uniform_set = _setup_render_pass_uniform_set(RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS, p_render_data, radiance_texture, true);
-			RenderListParameters render_list_params(
-					render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].elements.ptr(),
-					render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].element_info.ptr(),
-					render_list[RENDER_LIST_OPAQUE_NO_DEPTH_PREPASS].elements.size(),
-					reverse_cull,
-					PASS_MODE_COLOR,
-					color_pass_flags,
-					rb_data.is_null(),
-					p_render_data->directional_light_soft_shadows,
-					rp_uniform_set,
-					get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME,
-					Vector2(),
-					p_render_data->scene_data->lod_distance_multiplier,
-					p_render_data->scene_data->screen_mesh_lod_threshold,
-					p_render_data->scene_data->view_count);
-			_render_list_with_threads(
-					&render_list_params,
-					color_framebuffer,
-					RD::INITIAL_ACTION_CONTINUE,
-					will_continue_color ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ,
-					RD::INITIAL_ACTION_CONTINUE,
-					will_continue_depth ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ,
-					c,
-					1.0,
-					0);
-		}
-
-		if (will_continue_color && using_separate_specular) {
-			// Close the specular framebuffer as it'll no longer be used.
-			RD::get_singleton()->draw_list_begin(rb_data->get_specular_only_fb(), RD::INITIAL_ACTION_CONTINUE, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_CONTINUE, RD::FINAL_ACTION_CONTINUE);
-			RD::get_singleton()->draw_list_end();
 		}
 	}
 

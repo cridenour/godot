@@ -1263,6 +1263,8 @@ void SurfaceTool::generate_normals_to_color(bool p_flip) {
 					(*lv) += normal;
 				}
 			} else {
+				normal += Vector3(1.0, 1.0, 1.0);
+				normal /= 2.0;
 				v[i].color = Color(normal.x, normal.y, normal.z);
 			}
 		}
@@ -1275,6 +1277,8 @@ void SurfaceTool::generate_normals_to_color(bool p_flip) {
 				vertex.color = Color();
 			} else {
 				Vector3 normal = lv->normalized();
+				normal += Vector3(1.0, 1.0, 1.0);
+				normal /= 2.0;
 				vertex.color = Color(normal.x, normal.y, normal.z);
 			}
 		}

@@ -2838,19 +2838,6 @@ void SceneShaderData::set_code(const String &p_code) {
 	ubo_size = 0;
 	uniforms.clear();
 
-	if (code.is_empty()) {
-		return; //just invalid, but no error
-	}
-
-	ShaderCompiler::GeneratedCode gen_code;
-
-	int blend_modei = BLEND_MODE_MIX;
-	int depth_testi = DEPTH_TEST_ENABLED;
-	int depth_functioni = DEPTH_FUNCTION_LESS_OR_EQUAL;
-	int alpha_antialiasing_modei = ALPHA_ANTIALIASING_OFF;
-	int cull_modei = CULL_BACK;
-	int depth_drawi = DEPTH_DRAW_OPAQUE;
-
 	uses_point_size = false;
 	uses_alpha = false;
 	uses_alpha_clip = false;
@@ -2896,6 +2883,7 @@ void SceneShaderData::set_code(const String &p_code) {
 	// Actual enums set further down after compilation.
 	int blend_modei = BLEND_MODE_MIX;
 	int depth_testi = DEPTH_TEST_ENABLED;
+	int depth_functioni = DEPTH_FUNCTION_LESS_OR_EQUAL;
 	int alpha_antialiasing_modei = ALPHA_ANTIALIASING_OFF;
 	int cull_modei = CULL_BACK;
 	int depth_drawi = DEPTH_DRAW_OPAQUE;

@@ -2848,6 +2848,19 @@ void SceneShaderData::set_code(const String &p_code) {
 	ubo_size = 0;
 	uniforms.clear();
 
+	if (code.is_empty()) {
+		return; //just invalid, but no error
+	}
+
+	ShaderCompiler::GeneratedCode gen_code;
+
+	int blend_modei = BLEND_MODE_MIX;
+	int depth_testi = DEPTH_TEST_ENABLED;
+	int depth_functioni = DEPTH_FUNCTION_LESS_OR_EQUAL;
+	int alpha_antialiasing_modei = ALPHA_ANTIALIASING_OFF;
+	int cull_modei = CULL_BACK;
+	int depth_drawi = DEPTH_DRAW_OPAQUE;
+
 	uses_point_size = false;
 	uses_alpha = false;
 	uses_alpha_clip = false;
@@ -2916,6 +2929,15 @@ void SceneShaderData::set_code(const String &p_code) {
 
 	actions.render_mode_values["depth_test_disabled"] = Pair<int *, int>(&depth_testi, DEPTH_TEST_DISABLED);
 
+	actions.render_mode_values["depth_function_less_or_equal"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_LESS_OR_EQUAL);
+	actions.render_mode_values["depth_function_less"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_LESS);
+	actions.render_mode_values["depth_function_equal"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_EQUAL);
+	actions.render_mode_values["depth_function_greater"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_GREATER);
+	actions.render_mode_values["depth_function_not_equal"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_NOT_EQUAL);
+	actions.render_mode_values["depth_function_greater_or_equal"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_GREATER_OR_EQUAL);
+	actions.render_mode_values["depth_function_always"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_ALWAYS);
+	actions.render_mode_values["depth_function_never"] = Pair<int *, int>(&depth_functioni, DEPTH_FUNCTION_NEVER);
+
 	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_modei, CULL_DISABLED);
 	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_modei, CULL_FRONT);
 	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_modei, CULL_BACK);
@@ -2976,6 +2998,7 @@ void SceneShaderData::set_code(const String &p_code) {
 	alpha_antialiasing_mode = AlphaAntiAliasing(alpha_antialiasing_modei);
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
+	depth_function = DepthFunction(depth_functioni);
 	cull_mode = Cull(cull_modei);
 
 	vertex_input_mask = RS::ARRAY_FORMAT_VERTEX | RS::ARRAY_FORMAT_NORMAL; // We can always read vertices and normals.

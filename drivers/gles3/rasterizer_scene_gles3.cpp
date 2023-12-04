@@ -2654,6 +2654,8 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 		scene_state.enable_gl_depth_test(true);
 		scene_state.enable_gl_blend(false);
 		scene_state.set_gl_cull_mode(GLES3::SceneShaderData::CULL_BACK);
+		glDepthFunc(GL_LEQUAL);
+		scene_state.current_depth_test = GLES3::SceneShaderData::DEPTH_TEST_ENABLED;
 
 		_draw_sky(render_data.environment, render_data.cam_projection, render_data.cam_transform, sky_energy_multiplier, render_data.luminance_multiplier, p_camera_data->view_count > 1, flip_y, apply_color_adjustments_in_post);
 	}

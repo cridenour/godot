@@ -1286,10 +1286,10 @@ void SurfaceTool::generate_normals_to_color(bool p_flip) {
 			if (!lv) {
 				vertex.color = Color();
 			} else {
-				Vector3 normal = lv->normalized();
-				normal += Vector3(1.0, 1.0, 1.0);
-				normal /= 2.0;
-				vertex.color = Color(normal.x, normal.y, normal.z);
+				Vector3 smooth_normal = lv->normalized();
+				Vector3 packed_normal = smooth_normal + Vector3(1.0, 1.0, 1.0);
+				packed_normal /= 2.0;
+				vertex.color = Color(packed_normal.x, packed_normal.y, packed_normal.z);
 			}
 		}
 	}

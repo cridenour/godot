@@ -2551,7 +2551,7 @@ void Viewport::_gui_control_grab_focus(Control *p_control) {
 		Viewport *vp = this;
 		if (Object::cast_to<SubViewport>(vp)) {
 			SubViewportContainer *svc = Object::cast_to<SubViewportContainer>(get_parent());
-			if (svc) {
+			if (svc && svc->get_focus_mode() != Control::FOCUS_NONE) {
 				svc->grab_focus();
 			}
 		}

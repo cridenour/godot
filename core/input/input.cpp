@@ -341,7 +341,7 @@ bool Input::is_device_action_just_pressed(const StringName &p_action, int p_devi
 	}
 
 	// Backward compatibility for legacy behavior, only return true if currently pressed.
-	bool pressed_requirement = legacy_just_pressed_behavior ? E->value.cache.pressed : true;
+	bool pressed_requirement = legacy_just_pressed_behavior ? E->value.device_states[p_device].pressed : true;
 
 	if (Engine::get_singleton()->is_in_physics_frame()) {
 		return pressed_requirement && E->value.device_states[p_device].pressed_physics_frame == Engine::get_singleton()->get_physics_frames();
@@ -766,6 +766,7 @@ void Input::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool p_is_em
 
 		// Update the action's per-device state.
 		ActionState::DeviceState &device_state = action_state.device_states[device_id];
+		bool device_was_pressed = device_state.pressed[event_index];
 		device_state.pressed[event_index] = is_pressed;
 		device_state.strength[event_index] = p_event->get_action_strength(E.key);
 		device_state.raw_strength[event_index] = p_event->get_action_raw_strength(E.key);
@@ -783,12 +784,15 @@ void Input::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool p_is_em
 		if (action_state.cache.pressed && !was_pressed) {
 			action_state.pressed_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
 			action_state.pressed_process_frame = Engine::get_singleton()->get_process_frames();
-			device_state.pressed_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
-			device_state.pressed_process_frame = Engine::get_singleton()->get_process_frames();
 		}
 		if (!action_state.cache.pressed && was_pressed) {
 			action_state.released_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
 			action_state.released_process_frame = Engine::get_singleton()->get_process_frames();
+		}
+
+		if (!device_was_pressed && is_pressed) {
+			device_state.pressed_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
+			device_state.pressed_process_frame = Engine::get_singleton()->get_process_frames();
 		}
 	}
 

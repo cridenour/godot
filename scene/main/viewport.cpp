@@ -2223,27 +2223,27 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			if (joypadmotion_event.is_valid()) {
 				Input *input = Input::get_singleton();
 
-				if (p_event->is_action_pressed("ui_focus_next") && input->is_action_just_pressed("ui_focus_next")) {
+				if (p_event->is_action_pressed("ui_focus_next") && input->is_device_action_just_pressed("ui_focus_next", p_event->get_device())) {
 					next = from->find_next_valid_focus();
 				}
 
-				if (p_event->is_action_pressed("ui_focus_prev") && input->is_action_just_pressed("ui_focus_prev")) {
+				if (p_event->is_action_pressed("ui_focus_prev") && input->is_device_action_just_pressed("ui_focus_prev", p_event->get_device())) {
 					next = from->find_prev_valid_focus();
 				}
 
-				if (p_event->is_action_pressed("ui_up") && input->is_action_just_pressed("ui_up")) {
+				if (p_event->is_action_pressed("ui_up") && input->is_device_action_just_pressed("ui_up", p_event->get_device())) {
 					next = from->_get_focus_neighbor(SIDE_TOP);
 				}
 
-				if (p_event->is_action_pressed("ui_left") && input->is_action_just_pressed("ui_left")) {
+				if (p_event->is_action_pressed("ui_left") && input->is_device_action_just_pressed("ui_left", p_event->get_device())) {
 					next = from->_get_focus_neighbor(SIDE_LEFT);
 				}
 
-				if (p_event->is_action_pressed("ui_right") && input->is_action_just_pressed("ui_right")) {
+				if (p_event->is_action_pressed("ui_right") && input->is_device_action_just_pressed("ui_right", p_event->get_device())) {
 					next = from->_get_focus_neighbor(SIDE_RIGHT);
 				}
 
-				if (p_event->is_action_pressed("ui_down") && input->is_action_just_pressed("ui_down")) {
+				if (p_event->is_action_pressed("ui_down") && input->is_device_action_just_pressed("ui_down", p_event->get_device())) {
 					next = from->_get_focus_neighbor(SIDE_BOTTOM);
 				}
 			} else {

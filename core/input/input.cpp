@@ -329,6 +329,27 @@ bool Input::is_action_just_pressed(const StringName &p_action, bool p_exact) con
 	}
 }
 
+bool Input::is_device_action_just_pressed(const StringName &p_action, int p_device, bool p_exact) const {
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), false, InputMap::get_singleton()->suggest_actions(p_action));
+	HashMap<StringName, ActionState>::ConstIterator E = action_states.find(p_action);
+	if (!E) {
+		return false;
+	}
+
+	if (p_exact && E->value.exact == false) {
+		return false;
+	}
+
+	// Backward compatibility for legacy behavior, only return true if currently pressed.
+	bool pressed_requirement = legacy_just_pressed_behavior ? E->value.cache.pressed : true;
+
+	if (Engine::get_singleton()->is_in_physics_frame()) {
+		return pressed_requirement && E->value.device_states[p_device].pressed_physics_frame == Engine::get_singleton()->get_physics_frames();
+	} else {
+		return pressed_requirement && E->value.device_states[p_device].pressed_process_frame == Engine::get_singleton()->get_process_frames();
+	}
+}
+
 bool Input::is_action_just_released(const StringName &p_action, bool p_exact) const {
 	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), false, InputMap::get_singleton()->suggest_actions(p_action));
 	HashMap<StringName, ActionState>::ConstIterator E = action_states.find(p_action);
@@ -762,6 +783,8 @@ void Input::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool p_is_em
 		if (action_state.cache.pressed && !was_pressed) {
 			action_state.pressed_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
 			action_state.pressed_process_frame = Engine::get_singleton()->get_process_frames();
+			device_state.pressed_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;
+			device_state.pressed_process_frame = Engine::get_singleton()->get_process_frames();
 		}
 		if (!action_state.cache.pressed && was_pressed) {
 			action_state.released_physics_frame = Engine::get_singleton()->get_physics_frames() + 1;

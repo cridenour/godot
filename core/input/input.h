@@ -111,6 +111,8 @@ private:
 			bool pressed[MAX_EVENT] = { false };
 			float strength[MAX_EVENT] = { 0.0 };
 			float raw_strength[MAX_EVENT] = { 0.0 };
+			uint64_t pressed_physics_frame = UINT64_MAX;
+			uint64_t pressed_process_frame = UINT64_MAX;
 		};
 		bool api_pressed = false;
 		float api_strength = 0.0;
@@ -290,6 +292,7 @@ public:
 	bool is_joy_button_pressed(int p_device, JoyButton p_button) const;
 	bool is_action_pressed(const StringName &p_action, bool p_exact = false) const;
 	bool is_action_just_pressed(const StringName &p_action, bool p_exact = false) const;
+	bool is_device_action_just_pressed(const StringName &p_action, int p_device, bool p_exact = false) const;
 	bool is_action_just_released(const StringName &p_action, bool p_exact = false) const;
 	float get_action_strength(const StringName &p_action, bool p_exact = false) const;
 	float get_action_raw_strength(const StringName &p_action, bool p_exact = false) const;

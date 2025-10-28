@@ -340,13 +340,10 @@ bool Input::is_device_action_just_pressed(const StringName &p_action, int p_devi
 		return false;
 	}
 
-	// Backward compatibility for legacy behavior, only return true if currently pressed.
-	bool pressed_requirement = legacy_just_pressed_behavior ? E->value.device_states[p_device].pressed : true;
-
 	if (Engine::get_singleton()->is_in_physics_frame()) {
-		return pressed_requirement && E->value.device_states[p_device].pressed_physics_frame == Engine::get_singleton()->get_physics_frames();
+		return E->value.device_states[p_device].pressed_physics_frame == Engine::get_singleton()->get_physics_frames();
 	} else {
-		return pressed_requirement && E->value.device_states[p_device].pressed_process_frame == Engine::get_singleton()->get_process_frames();
+		return E->value.device_states[p_device].pressed_process_frame == Engine::get_singleton()->get_process_frames();
 	}
 }
 

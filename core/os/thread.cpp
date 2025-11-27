@@ -36,6 +36,7 @@
 #ifdef THREADS_ENABLED
 #include "core/object/script_language.h"
 #include "core/templates/safe_refcount.h"
+#include "core/profiling.h"
 
 SafeNumeric<uint64_t> Thread::id_counter(1); // The first value after .increment() is 2, hence by default the main thread ID should be 1.
 
@@ -58,6 +59,7 @@ void Thread::callback(ID p_caller_id, const Settings &p_settings, Callback p_cal
 		platform_functions.init();
 	}
 	ScriptServer::thread_enter(); // Scripts may need to attach a stack.
+	PROFILING_THREAD(itos(Thread::caller_id).ascii().ptr())
 	if (platform_functions.wrapper) {
 		platform_functions.wrapper(p_callback, p_userdata);
 	} else {

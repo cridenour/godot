@@ -30,6 +30,8 @@
 
 #include "node.h"
 
+#include "core/profiling.h"
+
 #include "core/config/project_settings.h"
 #include "core/io/resource_loader.h"
 #include "core/object/message_queue.h"
@@ -52,14 +54,17 @@ thread_local Node *Node::current_process_thread_group = nullptr;
 void Node::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_PROCESS: {
+			PROFILE_FUNCTION_NAMED("Node::NOTIFICATION_PROCESS")
 			GDVIRTUAL_CALL(_process, get_process_delta_time());
 		} break;
 
 		case NOTIFICATION_PHYSICS_PROCESS: {
+			PROFILE_FUNCTION_NAMED("Node::NOTIFICATION_PHYSICS_PROCESS")
 			GDVIRTUAL_CALL(_physics_process, get_physics_process_delta_time());
 		} break;
 
 		case NOTIFICATION_ENTER_TREE: {
+			PROFILE_FUNCTION_NAMED("Node::NOTIFICATION_ENTER_TREE")
 			ERR_FAIL_NULL(get_viewport());
 			ERR_FAIL_NULL(get_tree());
 
@@ -141,6 +146,7 @@ void Node::_notification(int p_notification) {
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
+			PROFILE_FUNCTION_NAMED("Node::NOTIFICATION_EXIT_TREE")
 			ERR_FAIL_NULL(get_viewport());
 			ERR_FAIL_NULL(get_tree());
 
@@ -191,6 +197,7 @@ void Node::_notification(int p_notification) {
 		} break;
 
 		case NOTIFICATION_READY: {
+			PROFILE_FUNCTION_NAMED("Node::NOTIFICATION_READY")
 			if (GDVIRTUAL_IS_OVERRIDDEN(_input)) {
 				set_process_input(true);
 			}
@@ -1381,6 +1388,7 @@ String Node::adjust_name_casing(const String &p_name) {
 }
 
 void Node::_validate_child_name(Node *p_child, bool p_force_human_readable) {
+	PROFILE_FUNCTION();
 	/* Make sure the name is unique */
 
 	if (p_force_human_readable) {
@@ -1518,6 +1526,7 @@ Node::InternalMode Node::get_internal_mode() const {
 }
 
 void Node::_add_child_nocheck(Node *p_child, const StringName &p_name, InternalMode p_internal_mode) {
+	PROFILE_FUNCTION();
 	//add a child node quickly, without name validation
 
 	p_child->data.name = p_name;
@@ -1560,6 +1569,7 @@ void Node::_add_child_nocheck(Node *p_child, const StringName &p_name, InternalM
 }
 
 void Node::add_child(Node *p_child, bool p_force_readable_name, InternalMode p_internal) {
+	PROFILE_FUNCTION();
 	ERR_FAIL_COND_MSG(data.inside_tree && !Thread::is_main_thread(), "Adding children to a node inside the SceneTree is only allowed from the main thread. Use call_deferred(\"add_child\",node).");
 
 	ERR_THREAD_GUARD
@@ -2634,6 +2644,7 @@ bool Node::get_scene_instance_load_placeholder() const {
 }
 
 Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) const {
+	PROFILE_FUNCTION();
 	ERR_THREAD_GUARD_V(nullptr);
 	Node *node = nullptr;
 
@@ -3156,6 +3167,7 @@ Node *Node::get_node_and_resource(const NodePath &p_path, Ref<Resource> &r_res, 
 }
 
 void Node::_set_tree(SceneTree *p_tree) {
+	PROFILE_FUNCTION();
 	SceneTree *tree_changed_a = nullptr;
 	SceneTree *tree_changed_b = nullptr;
 

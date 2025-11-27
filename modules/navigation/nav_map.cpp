@@ -37,6 +37,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/object/worker_thread_pool.h"
+#include "core/profiling.h"
 
 #include <Obstacle2d.h>
 
@@ -136,6 +137,7 @@ gd::PointKey NavMap::get_point_key(const Vector3 &p_pos) const {
 }
 
 Vector<Vector3> NavMap::get_path(Vector3 p_origin, Vector3 p_destination, bool p_optimize, uint32_t p_navigation_layers, Vector<int32_t> *r_path_types, TypedArray<RID> *r_path_rids, Vector<int64_t> *r_path_owners) const {
+	PROFILE_FUNCTION();
 	RWLockRead read_lock(map_rwlock);
 	if (iteration_id == 0) {
 		NAVMAP_ITERATION_ZERO_ERROR_MSG();
@@ -893,6 +895,7 @@ Vector3 NavMap::get_random_point(uint32_t p_navigation_layers, bool p_uniformly)
 }
 
 void NavMap::sync() {
+	PROFILE_FUNCTION();
 	RWLockWrite write_lock(map_rwlock);
 
 	// Performance Monitor
@@ -1341,6 +1344,7 @@ void NavMap::compute_single_avoidance_step_3d(uint32_t index, NavAgent **agent) 
 }
 
 void NavMap::step(real_t p_deltatime) {
+	PROFILE_FUNCTION()
 	deltatime = p_deltatime;
 
 	rvo_simulation_2d.setTimeStep(float(deltatime));

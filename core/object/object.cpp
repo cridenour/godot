@@ -37,6 +37,7 @@
 #include "core/object/message_queue.h"
 #include "core/object/script_language.h"
 #include "core/os/os.h"
+#include "core/profiling.h"
 #include "core/string/print_string.h"
 #include "core/string/translation.h"
 #include "core/templates/local_vector.h"
@@ -466,6 +467,7 @@ Variant Object::get_indexed(const Vector<StringName> &p_names, bool *r_valid) co
 }
 
 void Object::get_property_list(List<PropertyInfo> *p_list, bool p_reversed) const {
+	PROFILE_FUNCTION()
 	if (script_instance && p_reversed) {
 		script_instance->get_property_list(p_list);
 	}
@@ -641,6 +643,7 @@ Variant Object::_call_deferred_bind(const Variant **p_args, int p_argcount, Call
 }
 
 bool Object::has_method(const StringName &p_method) const {
+	PROFILE_FUNCTION();
 	if (p_method == CoreStringName(free_)) {
 		return true;
 	}
@@ -736,6 +739,7 @@ void Object::setvar(const Variant &p_key, const Variant &p_value, bool *r_valid)
 }
 
 Variant Object::callv(const StringName &p_method, const Array &p_args) {
+	PROFILE_DYNAMIC_FUNCTION_START(static_cast<String>(p_method).ascii())
 	const Variant **argptrs = nullptr;
 
 	if (p_args.size() > 0) {
@@ -750,10 +754,12 @@ Variant Object::callv(const StringName &p_method, const Array &p_args) {
 	if (ce.error != Callable::CallError::CALL_OK) {
 		ERR_FAIL_V_MSG(Variant(), "Error calling method from 'callv': " + Variant::get_call_error_text(this, p_method, argptrs, p_args.size(), ce) + ".");
 	}
+	PROFILE_DYNAMIC_FUNCTION_END()
 	return ret;
 }
 
 Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+	PROFILE_DYNAMIC_FUNCTION_START(static_cast<String>(p_method).ascii())
 	r_error.error = Callable::CallError::CALL_OK;
 
 	if (p_method == CoreStringName(free_)) {
@@ -762,6 +768,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 		if (p_argcount != 0) {
 			r_error.error = Callable::CallError::CALL_ERROR_TOO_MANY_ARGUMENTS;
 			r_error.expected = 0;
+			PROFILE_DYNAMIC_FUNCTION_END()
 			return Variant();
 		}
 		if (is_ref_counted()) {
@@ -779,6 +786,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 		//must be here, must be before everything,
 		memdelete(this);
 		r_error.error = Callable::CallError::CALL_OK;
+		PROFILE_DYNAMIC_FUNCTION_END()
 		return Variant();
 	}
 
@@ -790,6 +798,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 		//force jumptable
 		switch (r_error.error) {
 			case Callable::CallError::CALL_OK:
+				PROFILE_DYNAMIC_FUNCTION_END()
 				return ret;
 			case Callable::CallError::CALL_ERROR_INVALID_METHOD:
 				break;
@@ -797,6 +806,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 			case Callable::CallError::CALL_ERROR_TOO_MANY_ARGUMENTS:
 			case Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS:
 			case Callable::CallError::CALL_ERROR_METHOD_NOT_CONST:
+				PROFILE_DYNAMIC_FUNCTION_END()
 				return ret;
 			case Callable::CallError::CALL_ERROR_INSTANCE_IS_NULL: {
 			}
@@ -813,6 +823,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 		r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
 	}
 
+	PROFILE_DYNAMIC_FUNCTION_END()
 	return ret;
 }
 

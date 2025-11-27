@@ -34,6 +34,7 @@
 #include "core/config/project_settings.h"
 #include "core/io/missing_resource.h"
 #include "core/io/resource_loader.h"
+#include "core/profiling.h"
 #include "core/templates/local_vector.h"
 #include "scene/2d/node_2d.h"
 #ifndef _3D_DISABLED
@@ -125,6 +126,7 @@ Ref<Resource> SceneState::get_remap_resource(const Ref<Resource> &p_resource, Ha
 }
 
 Node *SceneState::instantiate(GenEditState p_edit_state) const {
+	PROFILE_FUNCTION()
 	// Nodes where instantiation failed (because something is missing.)
 	List<Node *> stray_instances;
 

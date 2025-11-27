@@ -30,6 +30,8 @@
 
 #include "scene_tree.h"
 
+#include "core/profiling.h"
+
 #include "core/config/project_settings.h"
 #include "core/debugger/engine_debugger.h"
 #include "core/input/input.h"
@@ -119,15 +121,17 @@ void SceneTreeTimer::release_connections() {
 SceneTreeTimer::SceneTreeTimer() {}
 
 void SceneTree::tree_changed() {
+	PROFILE_FUNCTION()
 	emit_signal(tree_changed_name);
 }
 
 void SceneTree::node_added(Node *p_node) {
+	PROFILE_FUNCTION()
 	emit_signal(node_added_name, p_node);
 }
 
 void SceneTree::node_removed(Node *p_node) {
-	// Nodes can only be removed from the main thread.
+	PROFILE_FUNCTION()
 	if (current_scene == p_node) {
 		current_scene = nullptr;
 	}
@@ -143,6 +147,7 @@ void SceneTree::node_renamed(Node *p_node) {
 
 SceneTree::Group *SceneTree::add_to_group(const StringName &p_group, Node *p_node) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 
 	HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 	if (!E) {
@@ -157,6 +162,7 @@ SceneTree::Group *SceneTree::add_to_group(const StringName &p_group, Node *p_nod
 
 void SceneTree::remove_from_group(const StringName &p_group, Node *p_node) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 
 	HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 	ERR_FAIL_COND(!E);
@@ -215,6 +221,7 @@ void SceneTree::_update_group_order(Group &g) {
 	if (g.nodes.is_empty()) {
 		return;
 	}
+	PROFILE_FUNCTION()
 
 	Node **gr_nodes = g.nodes.ptrw();
 	int gr_node_count = g.nodes.size();
@@ -230,6 +237,7 @@ void SceneTree::call_group_flagsp(uint32_t p_call_flags, const StringName &p_gro
 
 	{
 		_THREAD_SAFE_METHOD_
+		PROFILE_FUNCTION()
 
 		HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 		if (!E) {
@@ -314,6 +322,7 @@ void SceneTree::notify_group_flags(uint32_t p_call_flags, const StringName &p_gr
 	Vector<Node *> nodes_copy;
 	{
 		_THREAD_SAFE_METHOD_
+		PROFILE_FUNCTION()
 		HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 		if (!E) {
 			return;
@@ -376,6 +385,7 @@ void SceneTree::set_group_flags(uint32_t p_call_flags, const StringName &p_group
 	Vector<Node *> nodes_copy;
 	{
 		_THREAD_SAFE_METHOD_
+		PROFILE_FUNCTION()
 
 		HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 		if (!E) {
@@ -473,6 +483,7 @@ void SceneTree::iteration_prepare() {
 }
 
 bool SceneTree::physics_process(double p_time) {
+	PROFILE_FUNCTION()
 	current_frame++;
 
 	flush_transform_notifications();
@@ -504,6 +515,7 @@ bool SceneTree::physics_process(double p_time) {
 }
 
 bool SceneTree::process(double p_time) {
+	PROFILE_FUNCTION()
 	if (MainLoop::process(p_time)) {
 		_quit = true;
 	}
@@ -522,6 +534,7 @@ bool SceneTree::process(double p_time) {
 	MessageQueue::get_singleton()->flush(); //small little hack
 
 	flush_transform_notifications();
+
 
 	_process(false);
 
@@ -575,6 +588,7 @@ bool SceneTree::process(double p_time) {
 
 void SceneTree::process_timers(double p_delta, bool p_physics_frame) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	List<Ref<SceneTreeTimer>>::Element *L = timers.back(); //last element
 
 	for (List<Ref<SceneTreeTimer>>::Element *E = timers.front(); E;) {
@@ -608,6 +622,7 @@ void SceneTree::process_timers(double p_delta, bool p_physics_frame) {
 
 void SceneTree::process_tweens(double p_delta, bool p_physics) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	// This methods works similarly to how SceneTreeTimers are handled.
 	List<Ref<Tween>>::Element *L = tweens.back();
 
@@ -907,6 +922,7 @@ bool SceneTree::is_paused() const {
 }
 
 void SceneTree::_process_group(ProcessGroup *p_group, bool p_physics) {
+	PROFILE_FUNCTION()
 	// When reading this function, keep in mind that this code must work in a way where
 	// if any node is removed, this needs to continue working.
 
@@ -1163,6 +1179,7 @@ void SceneTree::_call_input_pause(const StringName &p_group, CallInputType p_cal
 	Vector<Node *> nodes_copy;
 	{
 		_THREAD_SAFE_METHOD_
+		PROFILE_FUNCTION()
 
 		HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 		if (!E) {
@@ -1286,6 +1303,7 @@ int64_t SceneTree::get_frame() const {
 
 TypedArray<Node> SceneTree::_get_nodes_in_group(const StringName &p_group) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	TypedArray<Node> ret;
 	HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 	if (!E) {
@@ -1325,6 +1343,7 @@ int SceneTree::get_node_count_in_group(const StringName &p_group) const {
 
 Node *SceneTree::get_first_node_in_group(const StringName &p_group) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 	if (!E) {
 		return nullptr; // No group.
@@ -1341,6 +1360,7 @@ Node *SceneTree::get_first_node_in_group(const StringName &p_group) {
 
 void SceneTree::get_nodes_in_group(const StringName &p_group, List<Node *> *p_list) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	HashMap<StringName, Group>::Iterator E = group_map.find(p_group);
 	if (!E) {
 		return;
@@ -1474,6 +1494,7 @@ void SceneTree::add_current_scene(Node *p_current) {
 
 Ref<SceneTreeTimer> SceneTree::create_timer(double p_delay_sec, bool p_process_always, bool p_process_in_physics, bool p_ignore_time_scale) {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	Ref<SceneTreeTimer> stt;
 	stt.instantiate();
 	stt->set_process_always(p_process_always);
@@ -1486,6 +1507,7 @@ Ref<SceneTreeTimer> SceneTree::create_timer(double p_delay_sec, bool p_process_a
 
 Ref<Tween> SceneTree::create_tween() {
 	_THREAD_SAFE_METHOD_
+	PROFILE_FUNCTION()
 	Ref<Tween> tween = memnew(Tween(true));
 	tweens.push_back(tween);
 	return tween;

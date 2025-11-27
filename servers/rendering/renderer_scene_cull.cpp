@@ -36,6 +36,8 @@
 #include "rendering_light_culler.h"
 #include "rendering_server_default.h"
 
+#include <core/profiling.h>
+
 #include <new>
 
 /* HALTON SEQUENCE */
@@ -4131,6 +4133,7 @@ void RendererSceneCull::update_dirty_instances() {
 }
 
 void RendererSceneCull::update() {
+	PROFILE_FUNCTION();
 	//optimize bvhs
 
 	uint32_t rid_count = scenario_owner.get_rid_count();
@@ -4208,6 +4211,7 @@ TypedArray<Image> RendererSceneCull::bake_render_uv2(RID p_base, const TypedArra
 }
 
 void RendererSceneCull::update_visibility_notifiers() {
+	PROFILE_FUNCTION()
 	SelfList<InstanceVisibilityNotifierData> *E = visible_notifier_list.first();
 	while (E) {
 		SelfList<InstanceVisibilityNotifierData> *N = E->next();

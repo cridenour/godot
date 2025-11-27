@@ -30,6 +30,8 @@
 
 #include "rendering_server_default.h"
 
+#include "core/profiling.h"
+
 #include "core/config/project_settings.h"
 #include "core/io/marshalls.h"
 #include "core/os/os.h"
@@ -69,6 +71,7 @@ void RenderingServerDefault::request_frame_drawn_callback(const Callable &p_call
 }
 
 void RenderingServerDefault::_draw(bool p_swap_buffers, double frame_step) {
+	PROFILE_FUNCTION()
 	RSG::rasterizer->begin_frame(frame_step);
 
 	TIMESTAMP_BEGIN()
@@ -369,6 +372,7 @@ void RenderingServerDefault::_thread_exit() {
 }
 
 void RenderingServerDefault::_thread_loop() {
+	PROFILING_THREAD("RenderingServerDefault")
 	DisplayServer::get_singleton()->gl_window_make_current(DisplayServer::MAIN_WINDOW_ID); // Move GL to this thread.
 
 	while (!exit) {

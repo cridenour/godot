@@ -38,6 +38,8 @@
 #include "rendering_server_globals.h"
 #include "servers/rendering/storage/texture_storage.h"
 
+#include <core/profiling.h>
+
 // Use the same antialiasing feather size as StyleBoxFlat's default
 // (but doubled, as it's specified for both sides here).
 // This value is empirically determined to provide good antialiasing quality
@@ -237,6 +239,7 @@ void RendererCanvasCull::_attach_canvas_item_for_draw(RendererCanvasCull::Item *
 }
 
 void RendererCanvasCull::_cull_canvas_item(Item *p_canvas_item, const Transform2D &p_parent_xform, const Rect2 &p_clip_rect, const Color &p_modulate, int p_z, RendererCanvasRender::Item **r_z_list, RendererCanvasRender::Item **r_z_last_list, Item *p_canvas_clip, Item *p_material_owner, bool p_allow_y_sort, uint32_t p_canvas_cull_mask, const Point2 &p_repeat_size, int p_repeat_times, RendererCanvasRender::Item *p_repeat_source_item) {
+	PROFILE_FUNCTION()
 	Item *ci = p_canvas_item;
 
 	if (!ci->visible) {
@@ -355,6 +358,7 @@ void RendererCanvasCull::_cull_canvas_item(Item *p_canvas_item, const Transform2
 	}
 
 	if (ci->sort_y) {
+		PROFILE_FUNCTION_NAMED("ySorting")
 		if (p_allow_y_sort) {
 			if (ci->ysort_children_count == -1) {
 				ci->ysort_children_count = 0;
@@ -2340,6 +2344,7 @@ void RendererCanvasCull::canvas_item_set_default_texture_repeat(RID p_item, RS::
 }
 
 void RendererCanvasCull::update_visibility_notifiers() {
+	PROFILE_FUNCTION()
 	SelfList<Item::VisibilityNotifierData> *E = visibility_notifier_list.first();
 	while (E) {
 		SelfList<Item::VisibilityNotifierData> *N = E->next();

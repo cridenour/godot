@@ -36,6 +36,8 @@
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 
+#include <core/profiling.h>
+
 #define FORCE_SEPARATE_PRESENT_QUEUE 0
 
 /**************************/
@@ -5053,6 +5055,7 @@ String RenderingDevice::get_device_pipeline_cache_uuid() const {
 }
 
 void RenderingDevice::swap_buffers() {
+	PROFILE_FUNCTION()
 	_THREAD_SAFE_METHOD_
 
 	_end_frame();

@@ -30,6 +30,8 @@
 
 #include "renderer_viewport.h"
 
+#include "core/profiling.h"
+
 #include "core/config/project_settings.h"
 #include "core/math/transform_interpolator.h"
 #include "core/object/worker_thread_pool.h"
@@ -222,6 +224,7 @@ void RendererViewport::_configure_3d_render_buffers(Viewport *p_viewport) {
 
 void RendererViewport::_draw_3d(Viewport *p_viewport) {
 #ifndef _3D_DISABLED
+	PROFILE_FUNCTION()
 	RENDER_TIMESTAMP("> Render 3D Scene");
 
 	Ref<XRInterface> xr_interface;
@@ -252,6 +255,7 @@ void RendererViewport::_draw_3d(Viewport *p_viewport) {
 }
 
 void RendererViewport::_draw_viewport(Viewport *p_viewport) {
+	PROFILE_FUNCTION()
 	if (p_viewport->measure_render_time) {
 		String rt_id = "vp_begin_" + itos(p_viewport->self.get_id());
 		RSG::utilities->capture_timestamp(rt_id);

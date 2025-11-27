@@ -30,6 +30,8 @@
 
 #include "physics_server_2d_wrap_mt.h"
 
+#include "core/profiling.h"
+
 #include "core/os/os.h"
 
 void PhysicsServer2DWrapMT::_assign_mt_ids(WorkerThreadPool::TaskID p_pump_task_id) {
@@ -42,6 +44,7 @@ void PhysicsServer2DWrapMT::_thread_exit() {
 }
 
 void PhysicsServer2DWrapMT::_thread_loop() {
+	PROFILING_THREAD("Physics2D Thread")
 	while (!exit) {
 		WorkerThreadPool::get_singleton()->yield();
 		command_queue.flush_all();
@@ -59,6 +62,7 @@ void PhysicsServer2DWrapMT::step(real_t p_step) {
 }
 
 void PhysicsServer2DWrapMT::sync() {
+	PROFILE_FUNCTION()
 	if (create_thread) {
 		command_queue.sync();
 	} else {

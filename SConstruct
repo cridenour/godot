@@ -195,7 +195,7 @@ if env.scons_version >= (4, 3):
 else:
     opts.Add("platform", "Target platform (%s)" % "|".join(platform_list), "")
     opts.Add("p", "Alias for 'platform'", "")
-opts.Add(EnumVariable("target", "Compilation target", "editor", ("editor", "template_release", "template_debug")))
+opts.Add(EnumVariable("target", "Compilation target", "editor", ("editor", "template_release", "template_debug", "template_profiling")))
 opts.Add(EnumVariable("arch", "CPU architecture", "auto", ["auto"] + architectures, architecture_aliases))
 opts.Add(BoolVariable("dev_build", "Developer build with dev-only debugging code (DEV_ENABLED)", False))
 opts.Add(
@@ -468,6 +468,7 @@ env.platform_apis = platform_apis
 env.editor_build = env["target"] == "editor"
 env.dev_build = env["dev_build"]
 env.debug_features = env["target"] in ["editor", "template_debug"]
+env.profiling = env["target"] == "template_profiling"
 
 if env["optimize"] == "auto":
     if env.dev_build:
@@ -495,6 +496,9 @@ if env.dev_build:
 else:
     # Disable assert() for production targets (only used in thirdparty code).
     env.Append(CPPDEFINES=["NDEBUG"])
+
+if env.profiling:
+    env.Append(CPPDEFINES=["PROFILING_ENABLED"])
 
 # SCons speed optimization controlled by the `fast_unsafe` option, which provide
 # more than 10 s speed up for incremental rebuilds.

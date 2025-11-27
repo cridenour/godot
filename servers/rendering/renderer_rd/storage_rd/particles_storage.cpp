@@ -34,6 +34,8 @@
 #include "servers/rendering/rendering_server_globals.h"
 #include "texture_storage.h"
 
+#include <core/profiling.h>
+
 using namespace RendererRD;
 
 ParticlesStorage *ParticlesStorage::singleton = nullptr;
@@ -1383,6 +1385,7 @@ void ParticlesStorage::_particles_update_buffers(Particles *particles) {
 	}
 }
 void ParticlesStorage::update_particles() {
+	PROFILE_FUNCTION()
 	if (!particle_update_list.first()) {
 		return;
 	}

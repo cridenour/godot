@@ -41,6 +41,8 @@
 #include "scene/resources/style_box.h"
 #include "scene/resources/world_2d.h"
 
+#include <core/profiling.h>
+
 #define ERR_DRAW_GUARD \
 	ERR_FAIL_COND_MSG(!drawing, "Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.")
 
@@ -130,6 +132,8 @@ CanvasItem *CanvasItem::get_current_item_drawn() {
 }
 
 void CanvasItem::_redraw_callback() {
+	PROFILE_FUNCTION();
+
 	if (!is_inside_tree()) {
 		pending_update = false;
 		return;
@@ -421,6 +425,8 @@ void CanvasItem::_window_visibility_changed() {
 
 void CanvasItem::queue_redraw() {
 	ERR_THREAD_GUARD; // Calling from thread is safe.
+	PROFILE_FUNCTION();
+
 	if (!is_inside_tree()) {
 		return;
 	}

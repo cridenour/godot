@@ -145,9 +145,8 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 	} else {
 		PROFILING_FREE(mem)
 		mem = (uint8_t *)realloc(mem, p_bytes);
-
+		PROFILING_ALLOC(mem, p_bytes)
 		ERR_FAIL_COND_V(mem == nullptr && p_bytes > 0, nullptr);
-		PROFILING_ALLOC(mem, p_bytes)	
 
 		return mem;
 	}

@@ -35,6 +35,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
+#include "core/profiling/profiling.h"
 
 #define FORCE_SEPARATE_PRESENT_QUEUE 0
 
@@ -5055,11 +5056,16 @@ String RenderingDevice::get_device_pipeline_cache_uuid() const {
 void RenderingDevice::swap_buffers() {
 	_THREAD_SAFE_METHOD_
 
+	GodotProfileZoneGroupedFirst(_profile_zone, "_end_frame");
 	_end_frame();
+
+	GodotProfileZoneGrouped(_profile_zone, "_execute_frame");
 	_execute_frame(true);
 
 	// Advance to the next frame and begin recording again.
 	frame = (frame + 1) % frames.size();
+
+	GodotProfileZoneGrouped(_profile_zone, "_begin_frame");
 	_begin_frame();
 }
 
@@ -5188,20 +5194,26 @@ uint64_t RenderingDevice::get_memory_usage(MemoryType p_type) const {
 
 void RenderingDevice::_begin_frame() {
 	// Before beginning this frame, wait on the fence if it was signaled to make sure its work is finished.
+	GodotProfileZoneGroupedFirst(_profile_zone, "driver->fence_wait");
 	if (frames[frame].draw_fence_signaled) {
 		driver->fence_wait(frames[frame].draw_fence);
 		frames[frame].draw_fence_signaled = false;
 	}
 
 	// Begin recording on the frame's command buffers.
+	GodotProfileZoneGrouped(_profile_zone, "driver->begin_segment");
 	driver->begin_segment(frame, frames_drawn++);
+	GodotProfileZoneGrouped(_profile_zone, "driver->setup_command_buffer_begin");
 	driver->command_buffer_begin(frames[frame].setup_command_buffer);
+	GodotProfileZoneGrouped(_profile_zone, "driver->command_buffer_begin");
 	driver->command_buffer_begin(frames[frame].draw_command_buffer);
 
 	// Reset the graph.
+	GodotProfileZoneGrouped(_profile_zone, "draw_graph.begin");
 	draw_graph.begin();
 
 	// Erase pending resources.
+	GodotProfileZoneGrouped(_profile_zone, "_free_pending_resources");
 	_free_pending_resources(frame);
 
 	// Advance staging buffer if used.
@@ -5231,12 +5243,16 @@ void RenderingDevice::_end_frame() {
 		ERR_PRINT("Found open compute list at the end of the frame, this should never happen (further compute will likely not work).");
 	}
 
+	GodotProfileZoneGroupedFirst(_profile_zone, "driver->setup_command_buffer_end");
 	driver->command_buffer_end(frames[frame].setup_command_buffer);
 
 	// The command buffer must be copied into a stack variable as the driver workarounds can change the command buffer in use.
 	RDD::CommandBufferID command_buffer = frames[frame].draw_command_buffer;
+	GodotProfileZoneGrouped(_profile_zone, "draw_graph.end");
 	draw_graph.end(RENDER_GRAPH_REORDER, RENDER_GRAPH_FULL_BARRIERS, command_buffer, frames[frame].command_buffer_pool);
+	GodotProfileZoneGrouped(_profile_zone, "driver->command_buffer_end");
 	driver->command_buffer_end(command_buffer);
+	GodotProfileZoneGrouped(_profile_zone, "driver->end_segment");
 	driver->end_segment();
 }
 

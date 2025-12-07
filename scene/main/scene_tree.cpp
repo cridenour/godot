@@ -41,6 +41,7 @@
 #include "core/object/worker_thread_pool.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
+#include "core/profiling/profiling.h"
 #include "core/string/print_string.h"
 #include "node.h"
 #include "scene/animation/tween.h"
@@ -443,6 +444,7 @@ void SceneTree::set_group(const StringName &p_group, const String &p_name, const
 }
 
 void SceneTree::initialize() {
+	GodotProfileZone("SceneTree::initialize");
 	ERR_FAIL_NULL(root);
 	MainLoop::initialize();
 	root->_set_tree(this);

@@ -39,6 +39,7 @@
 #include "core/debugger/engine_debugger.h"
 #include "core/debugger/script_debugger.h"
 #include "core/io/marshalls.h"
+#include "core/profiling/profiling.h"
 #include "core/version_generated.gen.h"
 #include "drivers/unix/net_socket_posix.h"
 #include "drivers/windows/dir_access_windows.h"
@@ -1697,6 +1698,8 @@ void OS_Windows::run() {
 	main_loop->initialize();
 
 	while (true) {
+		GodotProfileFrameMark;
+		GodotProfileZone("OS_Windows::run");
 		DisplayServer::get_singleton()->process_events(); // get rid of pending events
 		if (Main::iteration()) {
 			break;

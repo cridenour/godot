@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/math/transform_interpolator.h"
 #include "core/object/worker_thread_pool.h"
+#include "core/profiling/profiling.h"
 #include "renderer_canvas_cull.h"
 #include "renderer_scene_cull.h"
 #include "rendering_server_globals.h"
@@ -662,6 +663,7 @@ void RendererViewport::_draw_viewport(Viewport *p_viewport) {
 }
 
 void RendererViewport::draw_viewports(bool p_swap_buffers) {
+	GodotProfileZoneGroupedFirst(_profile_zone, "prepare viewports");
 	timestamp_vp_map.clear();
 
 #ifndef _3D_DISABLED
@@ -682,6 +684,7 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 	}
 
 	if (sorted_active_viewports_dirty) {
+		GodotProfileZoneGrouped(_profile_zone, "_sort_active_viewports");
 		sorted_active_viewports = _sort_active_viewports();
 		sorted_active_viewports_dirty = false;
 	}
@@ -690,10 +693,13 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 	//draw viewports
 	RENDER_TIMESTAMP("> Render Viewports");
 
+	GodotProfileZoneGrouped(_profile_zone, "render viewports");
+
 	//determine what is visible
 	draw_viewports_pass++;
 
 	for (int i = sorted_active_viewports.size() - 1; i >= 0; i--) { //to compute parent dependency, must go in reverse draw order
+		GodotProfileZone("render viewport");
 
 		Viewport *vp = sorted_active_viewports[i];
 
@@ -856,6 +862,7 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 
 	RENDER_TIMESTAMP("< Render Viewports");
 
+	GodotProfileZoneGrouped(_profile_zone, "rasterizer->blit_render_targets_to_screen");
 	if (p_swap_buffers && !blit_to_screen_list.is_empty()) {
 		for (const KeyValue<int, Vector<BlitToScreen>> &E : blit_to_screen_list) {
 			RSG::rasterizer->blit_render_targets_to_screen(E.key, E.value.ptr(), E.value.size());

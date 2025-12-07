@@ -48,6 +48,7 @@
 #include "core/object/message_queue.h"
 #include "core/os/os.h"
 #include "core/os/time.h"
+#include "core/profiling/profiling.h"
 #include "core/register_core_types.h"
 #include "core/string/translation.h"
 #include "core/version.h"
@@ -904,6 +905,7 @@ int Main::test_entrypoint(int argc, char *argv[], bool &tests_need_run) {
  */
 
 Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_phase) {
+	GodotProfileZone("setup");
 	Thread::make_main_thread();
 	set_current_thread_safe_for_nodes(true);
 
@@ -2560,6 +2562,7 @@ Error _parse_resource_dummy(void *p_data, VariantParser::Stream *p_stream, Ref<R
 }
 
 Error Main::setup2(bool p_show_boot_logo) {
+	GodotProfileZone("setup2");
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Main::Setup2");
 
 	Thread::make_main_thread(); // Make whatever thread call this the main thread.
@@ -3199,6 +3202,7 @@ Error Main::setup2(bool p_show_boot_logo) {
 }
 
 void Main::setup_boot_logo() {
+	GodotProfileZone("setup_boot_logo");
 	MAIN_PRINT("Main: Load Boot Image");
 
 #if !defined(TOOLS_ENABLED) && defined(WEB_ENABLED)
@@ -3276,6 +3280,7 @@ static MainTimerSync main_timer_sync;
 // and should move on to `OS::run`, and EXIT_FAILURE otherwise for
 // an early exit with that error code.
 int Main::start() {
+	GodotProfileZone("start");
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Main::Start");
 
 	ERR_FAIL_COND_V(!_start_success, false);
@@ -4042,6 +4047,8 @@ static uint64_t navigation_process_max = 0;
 // will terminate the program. In case of failure, the OS exit code needs
 // to be set explicitly here (defaults to EXIT_SUCCESS).
 bool Main::iteration() {
+	GodotProfileZone("Main::iteration");
+	GodotProfileZoneGroupedFirst(_profile_zone, "prepare");
 	iterating++;
 
 	const uint64_t ticks = OS::get_singleton()->get_ticks_usec();
@@ -4087,7 +4094,10 @@ bool Main::iteration() {
 	NavigationServer2D::get_singleton()->sync();
 	NavigationServer3D::get_singleton()->sync();
 
+	GodotProfileZoneGrouped(_profile_zone, "physics");
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
+		GodotProfileZone("Physics Step");
+		GodotProfileZoneGroupedFirst(_physics_zone, "setup");
 		if (Input::get_singleton()->is_agile_input_event_flushing()) {
 			Input::get_singleton()->flush_buffered_events();
 		}
@@ -4098,6 +4108,7 @@ bool Main::iteration() {
 		uint64_t physics_begin = OS::get_singleton()->get_ticks_usec();
 
 #ifndef _3D_DISABLED
+		GodotProfileZoneGrouped(_physics_zone, "PhysicsServer3D::sync");
 		PhysicsServer3D::get_singleton()->sync();
 		PhysicsServer3D::get_singleton()->flush_queries();
 #endif // _3D_DISABLED
@@ -4105,11 +4116,14 @@ bool Main::iteration() {
 		// Prepare the fixed timestep interpolated nodes BEFORE they are updated
 		// by the physics server, otherwise the current and previous transforms
 		// may be the same, and no interpolation takes place.
+		GodotProfileZoneGrouped(_physics_zone, "main loop iteration prepare");
 		OS::get_singleton()->get_main_loop()->iteration_prepare();
 
+		GodotProfileZoneGrouped(_physics_zone, "PhysicsServer2D::sync");
 		PhysicsServer2D::get_singleton()->sync();
 		PhysicsServer2D::get_singleton()->flush_queries();
 
+		GodotProfileZoneGrouped(_physics_zone, "physics_process");
 		if (OS::get_singleton()->get_main_loop()->physics_process(physics_step * time_scale)) {
 #ifndef _3D_DISABLED
 			PhysicsServer3D::get_singleton()->end_sync();
@@ -4130,10 +4144,12 @@ bool Main::iteration() {
 		message_queue->flush();
 
 #ifndef _3D_DISABLED
+		GodotProfileZoneGrouped(_profile_zone, "3D physics");
 		PhysicsServer3D::get_singleton()->end_sync();
 		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
 #endif // _3D_DISABLED
 
+		GodotProfileZoneGrouped(_profile_zone, "2D physics");
 		PhysicsServer2D::get_singleton()->end_sync();
 		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
 
@@ -4151,13 +4167,16 @@ bool Main::iteration() {
 
 	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
 
+	GodotProfileZoneGrouped(_profile_zone, "process");
 	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
 		exit = true;
 	}
 	message_queue->flush();
 
+	GodotProfileZoneGrouped(_profile_zone, "RenderingServer::sync");
 	RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 
+	GodotProfileZoneGrouped(_profile_zone, "RenderingServer::draw");
 	if ((DisplayServer::get_singleton()->can_any_window_draw() || DisplayServer::get_singleton()->has_additional_outputs()) &&
 			RenderingServer::get_singleton()->is_render_loop_enabled()) {
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
@@ -4176,10 +4195,12 @@ bool Main::iteration() {
 	process_max = MAX(process_ticks, process_max);
 	uint64_t frame_time = OS::get_singleton()->get_ticks_usec() - ticks;
 
+	GodotProfileZoneGrouped(_profile_zone, "ScriptServer::frame");
 	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 		ScriptServer::get_language(i)->frame();
 	}
 
+	GodotProfileZoneGrouped(_profile_zone, "AudioServer::update");
 	AudioServer::get_singleton()->update();
 
 	if (EngineDebugger::is_active()) {
@@ -4241,6 +4262,7 @@ bool Main::iteration() {
 		return exit;
 	}
 
+	GodotProfileZoneGrouped(_profile_zone, "OS::add_frame_delay");
 	OS::get_singleton()->add_frame_delay(DisplayServer::get_singleton()->window_can_draw());
 
 #ifdef TOOLS_ENABLED
@@ -4280,6 +4302,7 @@ void Main::force_redraw() {
  * The order matters as some of those steps are linked with each other.
  */
 void Main::cleanup(bool p_force) {
+	GodotProfileZone("cleanup");
 	OS::get_singleton()->benchmark_begin_measure("Shutdown", "Main::Cleanup");
 	if (!p_force) {
 		ERR_FAIL_COND(!_start_success);

@@ -32,6 +32,7 @@
 
 #include "core/debugger/engine_debugger.h"
 #include "core/io/marshalls.h"
+#include "core/profiling/profiling.h"
 
 #ifdef DEBUG_ENABLED
 #include "core/os/os.h"
@@ -67,6 +68,7 @@ void SceneMultiplayer::_update_status() {
 }
 
 Error SceneMultiplayer::poll() {
+	GodotProfileZone("SceneMultiplayer::poll");
 	_update_status();
 	if (last_connection_status == MultiplayerPeer::CONNECTION_DISCONNECTED) {
 		return OK;

@@ -33,6 +33,7 @@
 #include "gdscript_lambda_callable.h"
 
 #include "core/os/os.h"
+#include "core/profiling/profiling.h"
 
 #ifdef DEBUG_ENABLED
 
@@ -446,6 +447,8 @@ void (*type_init_function_table[])(Variant *) = {
 #define METHOD_CALL_ON_FREED_INSTANCE_ERROR(method_pointer) "Cannot call method '" + (method_pointer)->get_name() + "' on a previously freed instance."
 
 Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_args, int p_argcount, Callable::CallError &r_err, CallState *p_state) {
+	GodotProfileZoneScript(this, source, name, name, _initial_line);
+
 	OPCODES_TABLE;
 
 	if (!_code_ptr) {
@@ -1730,6 +1733,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(methodname_idx < 0 || methodname_idx >= _global_names_count);
 				const StringName *methodname = &_global_names_ptr[methodname_idx];
 
+				GodotProfileZoneScriptSystemCall(methodname, source, name, *methodname, line);
 				GET_INSTRUCTION_ARG(base, argc);
 				Variant **argptrs = instruction_args;
 
@@ -1844,6 +1848,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(_code_ptr[ip + 2] < 0 || _code_ptr[ip + 2] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 2]];
 
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
 				GET_INSTRUCTION_ARG(base, argc);
 
 #ifdef DEBUG_ENABLED
@@ -1927,6 +1932,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(methodname_idx < 0 || methodname_idx >= _global_names_count);
 				const StringName *methodname = &_global_names_ptr[methodname_idx];
 
+				GodotProfileZoneScriptSystemCall(methodname, source, name, *methodname, line);
+
 				int argc = _code_ptr[ip + 3];
 				GD_ERR_BREAK(argc < 0);
 
@@ -1956,6 +1963,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 				GD_ERR_BREAK(_code_ptr[ip + 1] < 0 || _code_ptr[ip + 1] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 1]];
+
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
 
 				int argc = _code_ptr[ip + 2];
 				GD_ERR_BREAK(argc < 0);
@@ -2003,6 +2012,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(_code_ptr[ip + 2] < 0 || _code_ptr[ip + 2] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 2]];
 
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
+
 				Variant **argptrs = instruction_args;
 
 #ifdef DEBUG_ENABLED
@@ -2039,6 +2050,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(_code_ptr[ip + 2] < 0 || _code_ptr[ip + 2] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 2]];
 
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
+
 				Variant **argptrs = instruction_args;
 #ifdef DEBUG_ENABLED
 				uint64_t call_time = 0;
@@ -2074,6 +2087,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 				GD_ERR_BREAK(_code_ptr[ip + 2] < 0 || _code_ptr[ip + 2] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 2]];
+
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
 
 				GET_INSTRUCTION_ARG(base, argc);
 
@@ -2126,6 +2141,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 				GD_ERR_BREAK(_code_ptr[ip + 2] < 0 || _code_ptr[ip + 2] >= _methods_count);
 				MethodBind *method = _methods_ptr[_code_ptr[ip + 2]];
+
+				GodotProfileZoneScriptSystemCall(method, source, name, method->get_name(), line);
 
 				GET_INSTRUCTION_ARG(base, argc);
 #ifdef DEBUG_ENABLED
@@ -2297,6 +2314,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 #endif
 				const StringName *methodname = &_global_names_ptr[self_fun];
+
+				GodotProfileZoneScriptSystemCall(methodname, source, name, *methodname, line);
 
 				Variant **argptrs = instruction_args;
 

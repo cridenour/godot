@@ -31,6 +31,7 @@
 #include "memory.h"
 
 #include "core/error/error_macros.h"
+#include "core/profiling/profiling.h"
 #include "core/templates/safe_refcount.h"
 
 #include <stdio.h>
@@ -75,6 +76,7 @@ void *Memory::alloc_static(size_t p_bytes, bool p_pad_align) {
 	void *mem = malloc(p_bytes + (prepad ? DATA_OFFSET : 0));
 
 	ERR_FAIL_NULL_V(mem, nullptr);
+	GodotProfileAlloc(mem, p_bytes + (prepad ? DATA_OFFSET : 0));
 
 	alloc_count.increment();
 
@@ -121,13 +123,16 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 #endif
 
 		if (p_bytes == 0) {
+			GodotProfileFree(mem);
 			free(mem);
 			return nullptr;
 		} else {
 			*s = p_bytes;
 
+			GodotProfileFree(mem);
 			mem = (uint8_t *)realloc(mem, p_bytes + DATA_OFFSET);
 			ERR_FAIL_NULL_V(mem, nullptr);
+			GodotProfileAlloc(mem, p_bytes + DATA_OFFSET);
 
 			s = (uint64_t *)(mem + SIZE_OFFSET);
 
@@ -136,9 +141,11 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 			return mem + DATA_OFFSET;
 		}
 	} else {
+		GodotProfileFree(mem);
 		mem = (uint8_t *)realloc(mem, p_bytes);
 
 		ERR_FAIL_COND_V(mem == nullptr && p_bytes > 0, nullptr);
+		GodotProfileAlloc(mem, p_bytes);
 
 		return mem;
 	}
@@ -165,8 +172,10 @@ void Memory::free_static(void *p_ptr, bool p_pad_align) {
 		mem_usage.sub(*s);
 #endif
 
+		GodotProfileFree(mem);
 		free(mem);
 	} else {
+		GodotProfileFree(mem);
 		free(mem);
 	}
 }

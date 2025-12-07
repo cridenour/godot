@@ -32,6 +32,7 @@
 
 #include "core/io/certs_compressed.gen.h"
 #include "core/io/dir_access.h"
+#include "core/profiling/profiling.h"
 #include "main/main.h"
 #include "servers/display_server.h"
 #include "servers/rendering_server.h"
@@ -955,6 +956,8 @@ void OS_LinuxBSD::run() {
 	//uint64_t frame=0;
 
 	while (true) {
+		GodotProfileFrameMark;
+		GodotProfileZone("OS_LinuxBSD::run");
 		DisplayServer::get_singleton()->process_events(); // get rid of pending events
 #ifdef JOYDEV_ENABLED
 		joypad->process_joypads();

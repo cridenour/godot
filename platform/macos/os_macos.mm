@@ -37,6 +37,7 @@
 #include "macos_terminal_logger.h"
 
 #include "core/crypto/crypto_core.h"
+#include "core/profiling/profiling.h"
 #include "core/version_generated.gen.h"
 #include "main/main.h"
 
@@ -779,6 +780,9 @@ void OS_MacOS::run() {
 	while (!quit) {
 		@autoreleasepool {
 			@try {
+				GodotProfileFrameMark;
+				GodotProfileZone("macOS main loop");
+
 				if (DisplayServer::get_singleton()) {
 					DisplayServer::get_singleton()->process_events(); // Get rid of pending events.
 				}

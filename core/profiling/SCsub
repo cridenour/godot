@@ -54,7 +54,6 @@ if env["profiler"]:
 
         env_tracy = env.Clone()
         env_tracy.Append(CPPDEFINES=["TRACY_ENABLE"])
-        env_tracy.Append(CPPDEFINES=["TRACY_ON_DEMAND"])
         if env["profiler_sample_callstack"]:
             if env["platform"] not in ("windows", "linux", "android"):
                 # Reference the feature matrix in the tracy documentation.

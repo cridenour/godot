@@ -34,6 +34,7 @@
 #include "godot_physics_server_2d.h"
 
 #include "core/os/os.h"
+#include "core/profiling/profiling.h"
 #include "core/templates/pair.h"
 
 #define TEST_MOTION_MARGIN_MIN_VALUE 0.0001
@@ -116,6 +117,7 @@ int GodotPhysicsDirectSpaceState2D::intersect_point(const PointParameters &p_par
 
 bool GodotPhysicsDirectSpaceState2D::intersect_ray(const RayParameters &p_parameters, RayResult &r_result) {
 	ERR_FAIL_COND_V(space->locked, false);
+	GodotProfileZone("GodotPhysicsDirectSpaceState2D::intersect_ray");
 
 	Vector2 begin, end;
 	Vector2 normal;

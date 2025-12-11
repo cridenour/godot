@@ -699,7 +699,6 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 	draw_viewports_pass++;
 
 	for (int i = sorted_active_viewports.size() - 1; i >= 0; i--) { //to compute parent dependency, must go in reverse draw order
-		GodotProfileZone("render viewport");
 
 		Viewport *vp = sorted_active_viewports[i];
 
@@ -764,6 +763,8 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 		if (vp->last_pass != draw_viewports_pass) {
 			continue; //should not draw
 		}
+
+		GodotProfileZone("render viewport");
 
 		RENDER_TIMESTAMP("> Render Viewport " + itos(i));
 

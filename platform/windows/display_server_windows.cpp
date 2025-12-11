@@ -35,6 +35,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/io/marshalls.h"
+#include "core/profiling/profiling.h"
 #include "core/version.h"
 #include "drivers/png/png_driver_common.h"
 #include "main/main.h"
@@ -3161,6 +3162,7 @@ String DisplayServerWindows::keyboard_get_layout_name(int p_index) const {
 
 void DisplayServerWindows::process_events() {
 	ERR_FAIL_COND(!Thread::is_main_thread());
+	GodotProfileZone("DisplayServerWindows::process_events");
 
 	if (!drop_events) {
 		joypad->process_joypads();
@@ -5330,6 +5332,7 @@ void DisplayServerWindows::_process_activate_event(WindowID p_window_id) {
 }
 
 void DisplayServerWindows::_process_key_events() {
+	GodotProfileZone("DisplayServerWindows::_process_key_events");
 	for (int i = 0; i < key_event_pos; i++) {
 		KeyEvent &ke = key_event_buffer[i];
 		switch (ke.uMsg) {

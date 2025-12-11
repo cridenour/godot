@@ -30,6 +30,8 @@
 
 #include "joypad_windows.h"
 
+#include "core/profiling/profiling.h"
+
 #include <oleauto.h>
 #include <wbemidl.h>
 
@@ -346,6 +348,7 @@ void JoypadWindows::probe_joypads() {
 
 void JoypadWindows::process_joypads() {
 	HRESULT hr;
+	GodotProfileZone("JoypadWindows::process_joypads");
 
 	for (int i = 0; i < XUSER_MAX_COUNT; i++) {
 		xinput_gamepad &joy = x_joypads[i];

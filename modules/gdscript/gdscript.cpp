@@ -940,6 +940,15 @@ bool GDScript::_get(const StringName &p_name, Variant &r_ret) const {
 	const GDScript *top = this;
 	while (top) {
 		{
+			// Resolve the preload lazily if necessary
+			HashMap<StringName, String>::ConstIterator LE = top->lazy_preload_constants.find(p_name);
+			if (LE) {
+				Error err = OK;
+				r_ret = GDScriptCache::resolve_lazy_preload(LE->value, err);
+				return true;
+			}
+		}
+		{
 			HashMap<StringName, Variant>::ConstIterator E = top->constants.find(p_name);
 			if (E) {
 				r_ret = E->value;
@@ -1737,6 +1746,15 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 
 	const GDScript *sptr = script.ptr();
 	while (sptr) {
+		{
+			// Resolve the preload lazily if necessary
+			HashMap<StringName, String>::ConstIterator LE = sptr->lazy_preload_constants.find(p_name);
+			if (LE) {
+				Error err = OK;
+				r_ret = GDScriptCache::resolve_lazy_preload(LE->value, err);
+				return true;
+			}
+		}
 		{
 			HashMap<StringName, Variant>::ConstIterator E = sptr->constants.find(p_name);
 			if (E) {
@@ -2861,6 +2879,8 @@ GDScriptLanguage::GDScriptLanguage() {
 	script_frame_time = 0;
 
 	int dmcs = GLOBAL_DEF(PropertyInfo(Variant::INT, "debug/settings/gdscript/max_call_stack", PROPERTY_HINT_RANGE, "512," + itos(GDScriptFunction::MAX_CALL_DEPTH - 1) + ",1"), 1024);
+
+	GLOBAL_DEF("gdscript/runtime/lazy_preload", false);
 
 	if (EngineDebugger::is_active()) {
 		//debugging enabled!

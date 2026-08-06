@@ -252,6 +252,17 @@ static bool _can_use_validate_call(const MethodBind *p_method, const Vector<GDSc
 }
 
 GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &codegen, Error &r_error, const GDScriptParser::ExpressionNode *p_expression, bool p_root, bool p_initializer) {
+	// Redirect preload() to a runtime resolver call instead of baking `preload->resource` as a constant
+	if (p_expression->type == GDScriptParser::Node::PRELOAD && GDScriptCache::is_lazy_preload_active()) {
+		const GDScriptParser::PreloadNode *preload_node = static_cast<const GDScriptParser::PreloadNode *>(p_expression);
+		GDScriptCodeGenerator::Address path_addr = codegen.add_constant(preload_node->resolved_path);
+		GDScriptCodeGenerator::Address result = codegen.add_temporary(_gdtype_from_datatype(p_expression->get_datatype(), codegen.script));
+		Vector<GDScriptCodeGenerator::Address> args;
+		args.push_back(path_addr);
+		codegen.generator->write_call_gdscript_utility(result, "@lazy_preload_resolve", args);
+		return result;
+	}
+
 	if (p_expression->is_constant && !(p_expression->get_datatype().is_meta_type && p_expression->get_datatype().kind == GDScriptParser::DataType::CLASS)) {
 		return codegen.add_constant(p_expression->reduced_value);
 	}
@@ -366,6 +377,14 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 						GDScriptNativeClass *nc = nullptr;
 
 						while (scr) {
+							if (scr->lazy_preload_constants.has(identifier)) {
+								GDScriptCodeGenerator::Address path_addr = codegen.add_constant(scr->lazy_preload_constants[identifier]);
+								GDScriptCodeGenerator::Address result = codegen.add_temporary(_gdtype_from_datatype(p_expression->get_datatype(), codegen.script));
+								Vector<GDScriptCodeGenerator::Address> args;
+								args.push_back(path_addr);
+								codegen.generator->write_call_gdscript_utility(result, "@lazy_preload_resolve", args);
+								return result;
+							}
 							if (scr->constants.has(identifier)) {
 								return codegen.add_constant(scr->constants[identifier]); // TODO: Get type here.
 							}
@@ -444,6 +463,15 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 							res = Ref<GDScript>(main_script);
 						} else {
 							String global_class_path = ScriptServer::get_global_class_path(identifier);
+							// class_name creates the same issue as preload, move through the resolver
+							if (GDScriptCache::is_lazy_preload_active()) {
+								GDScriptCodeGenerator::Address path_addr = codegen.add_constant(global_class_path);
+								GDScriptCodeGenerator::Address result = codegen.add_temporary(_gdtype_from_datatype(p_expression->get_datatype(), codegen.script));
+								Vector<GDScriptCodeGenerator::Address> args;
+								args.push_back(path_addr);
+								codegen.generator->write_call_gdscript_utility(result, "@lazy_preload_resolve", args);
+								return result;
+							}
 							if (ResourceLoader::get_resource_type(global_class_path) == "GDScript") {
 								Error err = OK;
 								// Should not need to pass p_owner since analyzer will already have done it.
@@ -2825,7 +2853,14 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 				const GDScriptParser::ConstantNode *constant = member.constant;
 				StringName name = constant->identifier->name;
 
-				p_script->constants.insert(name, constant->initializer->reduced_value);
+				// Defer class-level preload to resolve on first read instead of baking in whatever `preload->resource`
+				// held at this script's compile time
+				if (GDScriptCache::is_lazy_preload_active() && constant->initializer->type == GDScriptParser::Node::PRELOAD) {
+					const GDScriptParser::PreloadNode *preload = static_cast<const GDScriptParser::PreloadNode *>(constant->initializer);
+					p_script->lazy_preload_constants.insert(name, preload->resolved_path);
+				} else {
+					p_script->constants.insert(name, constant->initializer->reduced_value);
+				}
 			} break;
 
 			case GDScriptParser::ClassNode::Member::ENUM_VALUE: {

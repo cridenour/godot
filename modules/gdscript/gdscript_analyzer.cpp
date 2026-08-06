@@ -31,6 +31,7 @@
 #include "gdscript_analyzer.h"
 
 #include "gdscript.h"
+#include "gdscript_cache.h"
 #include "gdscript_utility_callable.h"
 #include "gdscript_utility_functions.h"
 
@@ -367,7 +368,7 @@ Error GDScriptAnalyzer::resolve_class_inheritance(GDScriptParser::ClassNode *p_c
 			push_error(vformat(R"(Class "%s" hides a built-in type.)", class_name), p_class->identifier);
 		} else if (class_exists(class_name)) {
 			push_error(vformat(R"(Class "%s" hides a native class.)", class_name), p_class->identifier);
-		} else if (ScriptServer::is_global_class(class_name) && (!GDScript::is_canonically_equal_paths(ScriptServer::get_global_class_path(class_name), parser->script_path) || p_class != parser->head)) {
+		} else if (ScriptServer::is_global_class(class_name) && parser->script_path.is_resource_file() && (!GDScript::is_canonically_equal_paths(ScriptServer::get_global_class_path(class_name), parser->script_path) || p_class != parser->head)) {
 			push_error(vformat(R"(Class "%s" hides a global script class.)", class_name), p_class->identifier);
 		} else if (ProjectSettings::get_singleton()->has_autoload(class_name) && ProjectSettings::get_singleton()->get_autoload(class_name).is_singleton) {
 			push_error(vformat(R"(Class "%s" hides an autoload singleton.)", class_name), p_class->identifier);
@@ -4473,6 +4474,8 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 			p_preload->resolved_path = parser->script_path.get_base_dir().path_join(p_preload->resolved_path);
 		}
 		p_preload->resolved_path = p_preload->resolved_path.simplify_path();
+		// Record any preloads in the case we want to generate a manifest
+		GDScriptCache::record_preload_manifest_entry(p_preload->resolved_path);
 		if (!ResourceLoader::exists(p_preload->resolved_path)) {
 			Ref<FileAccess> file_check = FileAccess::create(FileAccess::ACCESS_RESOURCES);
 
@@ -5168,6 +5171,13 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 					}
 				}
 				if (err || found == nullptr) {
+					// Fallback on error loading a preload but report
+					if (GDScriptCache::is_lazy_preload_active()) {
+						ERR_PRINT(vformat(R"(Lazy preload: could not statically resolve the class of "%s" (likely already replaced by a script extension's take_over_path()). Falling back to a weaker static type for this preload.)", script_path));
+						GDScriptParser::DataType fallback_type;
+						fallback_type.kind = GDScriptParser::DataType::VARIANT;
+						return fallback_type;
+					}
 					push_error(vformat(R"(Could not resolve script "%s".)", script_path), p_source);
 					GDScriptParser::DataType error_type;
 					error_type.kind = GDScriptParser::DataType::VARIANT;

@@ -105,6 +105,8 @@ class GDScript : public Script {
 	Vector<Variant> static_variables; // Static variable values.
 
 	HashMap<StringName, Variant> constants;
+	// Resolved_path of every class-level preload that was deferred
+	HashMap<StringName, String> lazy_preload_constants;
 	HashMap<StringName, GDScriptFunction *> member_functions;
 	HashMap<StringName, Ref<GDScript>> subclasses;
 	HashMap<StringName, MethodInfo> _signals;

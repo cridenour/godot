@@ -87,6 +87,9 @@ class GDScriptCache {
 	HashMap<String, HashSet<String>> dependencies;
 	HashMap<String, HashSet<String>> parser_inverse_dependencies;
 
+	HashSet<String> preload_manifest_entries;
+	void _write_preload_manifest();
+
 	friend class GDScript;
 	friend class GDScriptParserRef;
 	friend class GDScriptInstance;
@@ -118,6 +121,11 @@ public:
 	static void remove_static_script(const String &p_fqcn);
 
 	static void clear();
+
+	static bool is_lazy_preload_active();
+	static Variant resolve_lazy_preload(const String &p_path, Error &r_error);
+	static void record_preload_manifest_entry(const String &p_path);
+	static int warm_preload_manifest(const String &p_manifest_path);
 
 	GDScriptCache();
 	~GDScriptCache();

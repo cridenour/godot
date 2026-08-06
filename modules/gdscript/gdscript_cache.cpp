@@ -35,7 +35,11 @@
 #include "gdscript_compiler.h"
 #include "gdscript_parser.h"
 
+#include "core/config/engine.h"
+#include "core/config/project_settings.h"
 #include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
+#include "core/os/os.h"
 #include "core/templates/vector.h"
 
 GDScriptParserRef::Status GDScriptParserRef::get_status() const {
@@ -452,6 +456,9 @@ void GDScriptCache::clear() {
 	}
 	singleton->cleared = true;
 
+	// Write the preload manifest before anything else gets torn down
+	singleton->_write_preload_manifest();
+
 	singleton->parser_inverse_dependencies.clear();
 
 	for (const KeyValue<String, Vector<ObjectID>> &KV : singleton->abandoned_parser_map) {
@@ -492,4 +499,138 @@ GDScriptCache::~GDScriptCache() {
 		clear();
 	}
 	singleton = nullptr;
+}
+
+bool GDScriptCache::is_lazy_preload_active() {
+	static int active = -1;
+	if (active < 0) {
+		bool setting = GLOBAL_GET("gdscript/runtime/lazy_preload");
+		bool in_editor = Engine::get_singleton()->is_editor_hint();
+		active = (setting && !in_editor) ? 1 : 0;
+	}
+	return active == 1;
+}
+
+Variant GDScriptCache::resolve_lazy_preload(const String &p_path, Error &r_error) {
+	r_error = OK;
+
+	if (!ResourceLoader::exists(p_path)) {
+		r_error = ERR_FILE_NOT_FOUND;
+		ERR_PRINT(vformat(R"(Lazy preload: file "%s" does not exist.)", p_path));
+		return Variant();
+	}
+
+	const String res_type = ResourceLoader::get_resource_type(p_path);
+	if (res_type == "GDScript") {
+		Ref<GDScript> script = get_full_script(p_path, r_error);
+		if (r_error != OK || script.is_null()) {
+			r_error = r_error != OK ? r_error : ERR_CANT_OPEN;
+			ERR_PRINT(vformat(R"(Lazy preload: could not resolve script "%s".)", p_path));
+			return Variant();
+		}
+		return script;
+	}
+
+	Ref<Resource> res = ResourceLoader::load(p_path, res_type, ResourceFormatLoader::CACHE_MODE_REUSE, &r_error);
+	if (r_error != OK || res.is_null()) {
+		r_error = r_error != OK ? r_error : ERR_CANT_OPEN;
+		ERR_PRINT(vformat(R"(Lazy preload: could not resolve resource "%s".)", p_path));
+		return Variant();
+	}
+	return res;
+}
+
+static String _dump_preload_manifest_path() {
+	static bool checked = false;
+	static String path;
+	if (!checked) {
+		checked = true;
+		const String prefix = "--dump-preload-manifest=";
+		for (const String &arg : OS::get_singleton()->get_cmdline_args()) {
+			if (arg.begins_with(prefix)) {
+				path = arg.substr(prefix.length());
+				break;
+			}
+		}
+	}
+	return path;
+}
+
+void GDScriptCache::record_preload_manifest_entry(const String &p_path) {
+	if (singleton == nullptr) {
+		return;
+	}
+	if (_dump_preload_manifest_path().is_empty()) {
+		return;
+	}
+	MutexLock lock(singleton->mutex);
+	singleton->preload_manifest_entries.insert(p_path);
+}
+
+void GDScriptCache::_write_preload_manifest() {
+	String manifest_path = _dump_preload_manifest_path();
+	if (manifest_path.is_empty()) {
+		return;
+	}
+
+	Vector<String> sorted_entries;
+	for (const String &entry : preload_manifest_entries) {
+		sorted_entries.push_back(entry);
+	}
+	sorted_entries.sort();
+
+	Error err = OK;
+	Ref<FileAccess> f = FileAccess::open(manifest_path, FileAccess::WRITE, &err);
+	if (err != OK || f.is_null()) {
+		ERR_PRINT(vformat(R"(Lazy preload: could not write manifest to "%s" (error %d).)", manifest_path, (int)err));
+		return;
+	}
+	for (const String &entry : sorted_entries) {
+		f->store_line(entry);
+	}
+}
+
+// Reads in the manifest to actually preload after scripts have been replaced
+int GDScriptCache::warm_preload_manifest(const String &p_manifest_path) {
+	if (!FileAccess::exists(p_manifest_path)) {
+		WARN_PRINT(vformat(R"(Lazy preload: manifest "%s" does not exist; skipping warm-up.)", p_manifest_path));
+		return 0;
+	}
+
+	Error err = OK;
+	Ref<FileAccess> f = FileAccess::open(p_manifest_path, FileAccess::READ, &err);
+	if (err != OK || f.is_null()) {
+		WARN_PRINT(vformat(R"(Lazy preload: could not read manifest "%s"; skipping warm-up.)", p_manifest_path));
+		return 0;
+	}
+
+	int count = 0;
+	while (!f->eof_reached()) {
+		String line = f->get_line().strip_edges();
+		if (line.is_empty()) {
+			continue;
+		}
+		if (!ResourceLoader::exists(line)) {
+			WARN_PRINT(vformat(R"(Lazy preload: manifest entry "%s" does not exist; skipping.)", line));
+			continue;
+		}
+
+		const String res_type = ResourceLoader::get_resource_type(line);
+		Error load_err = OK;
+		if (res_type == "GDScript") {
+			Ref<GDScript> script = get_full_script(line, load_err);
+			if (load_err == OK && script.is_valid()) {
+				count++;
+			}
+		} else {
+			Ref<Resource> res = ResourceLoader::load(line, res_type, ResourceFormatLoader::CACHE_MODE_REUSE, &load_err);
+			if (load_err == OK && res.is_valid()) {
+				count++;
+			}
+		}
+		if (load_err != OK) {
+			WARN_PRINT(vformat(R"(Lazy preload: manifest entry "%s" failed to warm (error %d).)", line, (int)load_err));
+		}
+	}
+	return count;
 }

@@ -31,6 +31,7 @@
 #include "gdscript_utility_functions.h"
 
 #include "gdscript.h"
+#include "gdscript_cache.h"
 
 #include "core/io/resource_loader.h"
 #include "core/object/class_db.h"
@@ -240,6 +241,37 @@ struct GDScriptUtilityFunctionsDefinitions {
 		} else {
 			*r_ret = ResourceLoader::load(*p_args[0]);
 		}
+	}
+
+	static inline void _lazy_preload_resolve(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+		VALIDATE_ARG_COUNT(1);
+		if (p_args[0]->get_type() != Variant::STRING) {
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 0;
+			r_error.expected = Variant::STRING;
+			*r_ret = Variant();
+			return;
+		}
+		Error err = OK;
+		*r_ret = GDScriptCache::resolve_lazy_preload(*p_args[0], err);
+		if (err != OK) {
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 0;
+			r_error.expected = Variant::STRING;
+			*r_ret = vformat(R"(Lazy preload could not resolve "%s".)", *p_args[0]);
+		}
+	}
+
+	static inline void warm_preload_manifest(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+		VALIDATE_ARG_COUNT(1);
+		if (p_args[0]->get_type() != Variant::STRING) {
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 0;
+			r_error.expected = Variant::STRING;
+			*r_ret = 0;
+			return;
+		}
+		*r_ret = GDScriptCache::warm_preload_manifest(*p_args[0]);
 	}
 
 	static inline void inst_to_dict(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
@@ -725,6 +757,16 @@ void GDScriptUtilityFunctions::register_functions() {
 	REGISTER_FUNC_NO_ARGS(get_stack, false, Variant::ARRAY);
 	REGISTER_FUNC(len, true, Variant::INT, VARARG("var"));
 	REGISTER_FUNC(is_instance_of, true, Variant::BOOL, VARARG("value"), VARARG("type"));
+
+	REGISTER_FUNC(warm_preload_manifest, false, Variant::INT, ARG("manifest_path", Variant::STRING));
+
+	// Intentionally hidden from GDScript
+	{
+		MethodInfo info = MethodInfo("@lazy_preload_resolve", ARG("path", Variant::STRING));
+		info.return_val.type = Variant::NIL;
+		info.return_val.usage |= PROPERTY_USAGE_NIL_IS_VARIANT;
+		_register_function("@lazy_preload_resolve", info, GDScriptUtilityFunctionsDefinitions::_lazy_preload_resolve, false);
+	}
 }
 
 void GDScriptUtilityFunctions::unregister_functions() {

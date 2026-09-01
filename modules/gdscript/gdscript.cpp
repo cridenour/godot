@@ -1201,6 +1201,10 @@ GDScript *GDScript::find_class(const String &p_qualified_name) {
 	} else if (HashMap<StringName, Ref<GDScript>>::Iterator E = subclasses.find(first)) {
 		class_names = p_qualified_name.split("::");
 		result = E->value.ptr();
+	} else if (GDScriptCache::is_lazy_preload_active() && ScriptServer::is_global_class(first) && is_canonically_equal_paths(ScriptServer::get_global_class_path(first), get_root_script()->path)) {
+		// A mod is attempting to extend a script at the path, but that path is actually a class_name that has already been extended
+		class_names = p_qualified_name.split("::");
+		result = get_root_script();
 	} else if (_owner != nullptr) {
 		// Check parent scope.
 		return _owner->find_class(p_qualified_name);
